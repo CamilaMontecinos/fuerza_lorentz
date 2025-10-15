@@ -116,7 +116,7 @@ col1, col2, col3 = st.columns([1, 2, 1])
 
 with col2:
     # Crear el gráfico con tamaño más pequeño y ajustes de diseño
-    fig, ax = plt.subplots(figsize=(6, 4.5))  # Más pequeño aún
+    fig, ax = plt.subplots(figsize=(8, 6))  # Más pequeño aún
     
     ax.set_aspect('equal', 'box')
     ax.set_title('Trayectoria de un protón en un campo magnético uniforme', fontsize=11)
@@ -175,6 +175,7 @@ with col2:
 # Créditos
 st.markdown("<p style='text-align: center; color: gray;'>© Domenico Sapone, Camila Montecinos</p>", 
             unsafe_allow_html=True)
+
 
 
 
