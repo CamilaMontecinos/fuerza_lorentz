@@ -1,9 +1,7 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import io
-import base64
+import time
 
 # Configuración de la página
 st.set_page_config(page_title="Simulación Campo Magnético", layout="wide")
@@ -96,9 +94,29 @@ def run_simulation(b_mag, v_mag, field_off_flag):
         
     return posiciones_x, posiciones_y, times
 
-# Configuración de la figura (igual a la original)
+# Estado de la simulación
+if 'simulation_data' not in st.session_state:
+    st.session_state.simulation_data = None
+if 'current_frame' not in st.session_state:
+    st.session_state.current_frame = 0
+if 'is_playing' not in st.session_state:
+    st.session_state.is_playing = False
+
+# Manejo de botones
+if play_button:
+    with st.spinner("Calculando simulación..."):
+        posiciones_x, posiciones_y, times = run_simulation(B, velocity, field_off)
+        st.session_state.simulation_data = (posiciones_x, posiciones_y)
+        st.session_state.is_playing = True
+        st.session_state.current_frame = 0
+
+if reset_button:
+    st.session_state.is_playing = False
+    st.session_state.current_frame = 0
+    st.session_state.simulation_data = None
+
+# Crear el gráfico
 fig, ax = plt.subplots(figsize=(10, 8))
-plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 
 ax.set_aspect('equal', 'box')
 ax.set_title('Trayectoria de un protón en un campo magnético uniforme')
@@ -118,16 +136,12 @@ ax.axvline(x=field_start_pos_x, color='red', linewidth=3, linestyle='--')
 dots_x = np.linspace(0.005, X_LIM_RIGHT - 0.005, 6)
 dots_y = np.linspace(-Y_LIM + 0.005, -0.005, 6)
 dots_grid_x, dots_grid_y = np.meshgrid(dots_x, dots_y)
-field_dots = ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=50)
 
-def style_field_dots(field_off_flag):
-    """Ajusta el estilo de los puntos según si el campo está apagado o no."""
-    if field_off_flag:
-        field_dots.set_color('gray')
-        field_dots.set_alpha(0.25)
-    else:
-        field_dots.set_color('black')
-        field_dots.set_alpha(1.0)
+# Estilo de puntos según campo
+if field_off:
+    field_dots = ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='gray', s=50, alpha=0.25)
+else:
+    field_dots = ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=50, alpha=1.0)
 
 # Elementos de la animación
 line, = ax.plot([], [], 'b-', lw=2)
@@ -135,90 +149,49 @@ punto, = ax.plot([], [], 'ro', markersize=8)
 info_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, fontsize=10,
                     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
 
-# Estado de la simulación
-if 'simulation_data' not in st.session_state:
-    st.session_state.simulation_data = None
-if 'current_frame' not in st.session_state:
-    st.session_state.current_frame = 0
-if 'is_playing' not in st.session_state:
-    st.session_state.is_playing = False
-if 'ani' not in st.session_state:
-    st.session_state.ani = None
-
-# Función para inicializar animación
-def init_animation():
-    line.set_data([], [])
-    punto.set_data([initial_pos_x], [0.0])
-    info_text.set_text('Presiona Play para iniciar')
-    style_field_dots(field_off)
-    return line, punto, info_text
-
-# Función para actualizar animación
-def update_animation(frame):
-    if not st.session_state.is_playing or frame >= len(st.session_state.simulation_data[0]):
-        return line, punto, info_text
-    
-    st.session_state.current_frame = frame
+# Mostrar animación o estado inicial
+if st.session_state.is_playing and st.session_state.simulation_data:
     posiciones_x, posiciones_y = st.session_state.simulation_data
+    current_frame = st.session_state.current_frame
     
-    # Actualizar gráficos
-    line.set_data(posiciones_x[:frame+1], posiciones_y[:frame+1])
-    punto.set_data([posiciones_x[frame]], [posiciones_y[frame]])
+    # Actualizar gráficos con el frame actual
+    line.set_data(posiciones_x[:current_frame+1], posiciones_y[:current_frame+1])
+    punto.set_data([posiciones_x[current_frame]], [posiciones_y[current_frame]])
     
-    # Información simple de zona
+    # Información de zona
     if field_off:
         campo = "SIN campo (B=0)"
     else:
-        campo = "CON campo" if posiciones_x[frame] >= field_start_pos_x else "SIN campo"
+        campo = "CON campo" if posiciones_x[current_frame] >= field_start_pos_x else "SIN campo"
     
-    info = f'Zona: {campo}'
-    info_text.set_text(info)
+    info_text.set_text(f'Zona: {campo}')
     
-    return line, punto, info_text
-
-# Manejo de botones
-if play_button:
-    with st.spinner("Calculando simulación..."):
-        posiciones_x, posiciones_y, times = run_simulation(B, velocity, field_off)
-        st.session_state.simulation_data = (posiciones_x, posiciones_y)
-        st.session_state.is_playing = True
-        st.session_state.current_frame = 0
-        
-        # Limpiar gráficos
-        line.set_data([], [])
-        punto.set_data([initial_pos_x], [0.0])
-        style_field_dots(field_off)
-        
-        # Crear animación
-        if st.session_state.ani is not None:
-            st.session_state.ani.event_source.stop()
-        
-        st.session_state.ani = FuncAnimation(fig, update_animation, 
-                                           frames=len(posiciones_x),
-                                           init_func=init_animation, 
-                                           blit=True, interval=20, 
-                                           repeat=False)
-
-if reset_button:
-    st.session_state.is_playing = False
-    st.session_state.current_frame = 0
-    st.session_state.simulation_data = None
-    if st.session_state.ani is not None:
-        st.session_state.ani.event_source.stop()
+    # Avanzar al siguiente frame
+    if current_frame < len(posiciones_x) - 1:
+        st.session_state.current_frame += 1
+    else:
+        st.session_state.is_playing = False
     
-    # Resetear gráficos
+else:
+    # Estado inicial
     line.set_data([], [])
     punto.set_data([initial_pos_x], [0.0])
-    info_text.set_text('Simulación reiniciada\nPresiona Play para iniciar')
-    style_field_dots(field_off)
+    if st.session_state.simulation_data is None:
+        info_text.set_text('Presiona Play para iniciar')
+    else:
+        info_text.set_text('Simulación completada')
 
 # Mostrar el gráfico
-st.pyplot(fig)
+chart_placeholder = st.empty()
+chart_placeholder.pyplot(fig)
 
-# Créditos (en la posición original)
+# Auto-actualización si la simulación está en curso
+if st.session_state.is_playing:
+    time.sleep(0.02)  # Control de velocidad (similar al interval=20 original)
+    st.rerun()
+
+# Créditos
 st.markdown("<p style='text-align: center; color: gray;'>© Domenico Sapone, Camila Montecinos</p>", 
             unsafe_allow_html=True)
-
-
 
 
