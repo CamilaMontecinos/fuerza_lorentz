@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Configuración de la página
-st.set_page_config(page_title="Simulación Campo Magnético", layout="wide")
+st.set_page_config(page_title="Simulación Campo Magnético", layout="centered")
 
 # Constantes físicas
 q_proton = 1.602e-19
@@ -168,6 +168,7 @@ st.pyplot(fig)
 # Créditos
 st.markdown("<p style='text-align: center; color: gray;'>© Domenico Sapone, Camila Montecinos</p>", 
             unsafe_allow_html=True)
+
 
 
 
