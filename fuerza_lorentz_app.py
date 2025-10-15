@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 
 # Configuración de la página
 st.set_page_config(page_title="Simulación Campo Magnético", layout="wide")
@@ -95,25 +94,22 @@ def run_simulation(b_mag, v_mag, field_off_flag):
     return posiciones_x, posiciones_y, times
 
 # Estado de la simulación
+if 'simulation_run' not in st.session_state:
+    st.session_state.simulation_run = False
 if 'simulation_data' not in st.session_state:
     st.session_state.simulation_data = None
-if 'current_frame' not in st.session_state:
-    st.session_state.current_frame = 0
-if 'is_playing' not in st.session_state:
-    st.session_state.is_playing = False
 
 # Manejo de botones
 if play_button:
-    with st.spinner("Calculando simulación..."):
+    with st.spinner("Calculando trayectoria..."):
         posiciones_x, posiciones_y, times = run_simulation(B, velocity, field_off)
         st.session_state.simulation_data = (posiciones_x, posiciones_y)
-        st.session_state.is_playing = True
-        st.session_state.current_frame = 0
+        st.session_state.simulation_run = True
 
 if reset_button:
-    st.session_state.is_playing = False
-    st.session_state.current_frame = 0
+    st.session_state.simulation_run = False
     st.session_state.simulation_data = None
+    st.rerun()
 
 # Crear el gráfico
 fig, ax = plt.subplots(figsize=(10, 8))
@@ -139,59 +135,36 @@ dots_grid_x, dots_grid_y = np.meshgrid(dots_x, dots_y)
 
 # Estilo de puntos según campo
 if field_off:
-    field_dots = ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='gray', s=50, alpha=0.25)
+    ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='gray', s=50, alpha=0.25)
 else:
-    field_dots = ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=50, alpha=1.0)
+    ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=50, alpha=1.0)
 
-# Elementos de la animación
-line, = ax.plot([], [], 'b-', lw=2)
-punto, = ax.plot([], [], 'ro', markersize=8)
-info_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, fontsize=10,
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
-
-# Mostrar animación o estado inicial
-if st.session_state.is_playing and st.session_state.simulation_data:
+# Mostrar simulación o estado inicial
+if st.session_state.simulation_run and st.session_state.simulation_data:
     posiciones_x, posiciones_y = st.session_state.simulation_data
-    current_frame = st.session_state.current_frame
     
-    # Actualizar gráficos con el frame actual
-    line.set_data(posiciones_x[:current_frame+1], posiciones_y[:current_frame+1])
-    punto.set_data([posiciones_x[current_frame]], [posiciones_y[current_frame]])
+    # Trazar solo la trayectoria (línea azul)
+    ax.plot(posiciones_x, posiciones_y, 'b-', lw=2)
     
-    # Información de zona
+    # Información en el gráfico (solo campo y velocidad como antes)
     if field_off:
-        campo = "SIN campo (B=0)"
+        campo_text = "SIN campo (B=0)"
     else:
-        campo = "CON campo" if posiciones_x[current_frame] >= field_start_pos_x else "SIN campo"
+        campo_text = f"B = {B:.3f} T"
     
-    info_text.set_text(f'Zona: {campo}')
-    
-    # Avanzar al siguiente frame
-    if current_frame < len(posiciones_x) - 1:
-        st.session_state.current_frame += 1
-    else:
-        st.session_state.is_playing = False
+    info_text = f"{campo_text}\nVelocidad = {velocity:,} m/s"
+    ax.text(0.02, 0.95, info_text, transform=ax.transAxes, fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
     
 else:
-    # Estado inicial
-    line.set_data([], [])
-    punto.set_data([initial_pos_x], [0.0])
-    if st.session_state.simulation_data is None:
-        info_text.set_text('Presiona Play para iniciar')
-    else:
-        info_text.set_text('Simulación completada')
+    # Estado inicial - solo posición inicial
+    ax.plot(initial_pos_x, 0.0, 'ro', markersize=8)
+    ax.text(0.02, 0.95, 'Presiona Play para iniciar', transform=ax.transAxes, fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
 
 # Mostrar el gráfico
-chart_placeholder = st.empty()
-chart_placeholder.pyplot(fig)
-
-# Auto-actualización si la simulación está en curso
-if st.session_state.is_playing:
-    time.sleep(0.02)  # Control de velocidad (similar al interval=20 original)
-    st.rerun()
+st.pyplot(fig)
 
 # Créditos
 st.markdown("<p style='text-align: center; color: gray;'>© Domenico Sapone, Camila Montecinos</p>", 
             unsafe_allow_html=True)
-
-
