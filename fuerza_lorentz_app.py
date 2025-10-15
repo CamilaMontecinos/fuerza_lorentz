@@ -1,17 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 14 20:54:45 2025
-
-@author: camil
-"""
-
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import io
-import base64
-from IPython.display import HTML
 
 # Configuración de la página
 st.set_page_config(page_title="Simulación Campo Magnético", layout="wide")
@@ -47,8 +36,7 @@ B = st.sidebar.slider(
     max_value=0.01,
     value=B_initial,
     step=0.0005,
-    format="%.3f",
-    help="Controla la intensidad del campo magnético"
+    format="%.3f"
 )
 
 velocity = st.sidebar.slider(
@@ -56,33 +44,28 @@ velocity = st.sidebar.slider(
     min_value=5000,
     max_value=22000,
     value=velocity_initial,
-    step=1000,
-    help="Velocidad inicial del protón"
+    step=1000
 )
 
-# Botones en sidebar
-col1, col2, col3 = st.sidebar.columns(3)
+# Botón simple para campo nulo
+field_off = st.sidebar.checkbox("Campo magnético apagado (B = 0)", value=False)
 
+# Botones de control
+col1, col2 = st.sidebar.columns(2)
 with col1:
-    play_button = st.button("▶️ Play", use_container_width=True)
-
+    play_button = st.button("▶️ Ejecutar Simulación", use_container_width=True)
 with col2:
     reset_button = st.button("🔄 Reiniciar", use_container_width=True)
 
-with col3:
-    field_off = st.toggle("B = 0", value=False, help="Apagar el campo magnético")
-
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📊 Información")
 st.sidebar.info("""
 **Instrucciones:**
-1. Ajusta los parámetros con los sliders
-2. Presiona **Play** para iniciar
-3. Usa **B=0** para campo nulo
-4. **Reiniciar** para volver al inicio
+1. Ajusta los parámetros
+2. Presiona **Ejecutar Simulación**
+3. Usa el checkbox para apagar el campo
 """)
 
-# Función de simulación
+# Función de simulación (la misma que tenías originalmente)
 def run_simulation(b_mag, v_mag, field_off_flag):
     """Ejecuta la simulación con los parámetros dados"""
     q = q_proton
@@ -131,126 +114,13 @@ def run_simulation(b_mag, v_mag, field_off_flag):
         
     return posiciones_x, posiciones_y, times
 
-# Función para crear la animación
-def create_animation(posiciones_x, posiciones_y, field_off_flag):
-    """Crea y muestra la animación"""
-    fig, ax = plt.subplots(figsize=(10, 8))
+# Función para crear el gráfico (SIN animación)
+def create_plot(posiciones_x, posiciones_y, field_off_flag, B_value, velocity_value):
+    """Crea el gráfico de la trayectoria"""
+    fig, ax = plt.subplots(figsize=(12, 8))  # Tamaño más grande
     
     ax.set_aspect('equal', 'box')
-    ax.set_title('Trayectoria de un protón en un campo magnético uniforme')
-    ax.set_xlabel('Posición X (m)')
-    ax.set_ylabel('Posición Y (m)')
-    ax.grid(True)
-    ax.set_facecolor('#f0f0f0')
-    
-    # ESCALA FIJA
-    ax.set_xlim(X_LIM_LEFT, X_LIM_RIGHT)
-    ax.set_ylim(-Y_LIM, 0.01)
-    
-    # Línea divisoria
-    ax.axvline(x=field_start_pos_x, color='red', linewidth=3, linestyle='--', 
-               label='Límite del campo')
-    
-    # Puntos de campo magnético (a la derecha) - solo si el campo no está apagado
-    if not field_off_flag:
-        dots_x = np.linspace(0.005, X_LIM_RIGHT - 0.005, 6)
-        dots_y = np.linspace(-Y_LIM + 0.005, Y_LIM - 0.005, 6)
-        dots_grid_x, dots_grid_y = np.meshgrid(dots_x, dots_y)
-        ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=50, 
-                  label='Campo magnético')
-    else:
-        # Mostrar área sombreada cuando el campo está apagado
-        ax.axvspan(field_start_pos_x, X_LIM_RIGHT, alpha=0.2, color='gray', 
-                  label='Campo apagado')
-    
-    # Elementos de la animación
-    line, = ax.plot([], [], 'b-', lw=2, label='Trayectoria')
-    punto, = ax.plot([], [], 'ro', markersize=8, label='Protón')
-    
-    # Información del estado
-    info_text = ax.text(0.02, 0.95, '', transform=ax.transAxes, fontsize=10,
-                       bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
-    
-    # Leyenda
-    ax.legend(loc='upper right')
-    
-    def init():
-        line.set_data([], [])
-        punto.set_data([initial_pos_x], [0.0])
-        campo_status = "SIN campo (B=0)" if field_off_flag else "Presiona Play para iniciar"
-        info_text.set_text(campo_status)
-        return line, punto, info_text
-    
-    def update(frame):
-        line.set_data(posiciones_x[:frame+1], posiciones_y[:frame+1])
-        punto.set_data([posiciones_x[frame]], [posiciones_y[frame]])
-        
-        # Información de zona
-        if field_off_flag:
-            campo = "SIN campo (B=0)"
-        else:
-            campo = "CON campo" if posiciones_x[frame] >= field_start_pos_x else "SIN campo"
-        
-        info = f'Zona: {campo}\nFrame: {frame}/{len(posiciones_x)-1}'
-        info_text.set_text(info)
-        
-        return line, punto, info_text
-    
-    # Crear animación
-    ani = FuncAnimation(fig, update, frames=len(posiciones_x),
-                       init_func=init, blit=True, interval=20, repeat=False)
-    
-    # Mostrar en Streamlit
-    st.pyplot(fig)
-    
-    # Información adicional
-    st.markdown("---")
-    col_info1, col_info2, col_info3 = st.columns(3)
-    
-    with col_info1:
-        st.metric("Campo Magnético B", f"{B if not field_off else 0:.3f} T")
-    
-    with col_info2:
-        st.metric("Velocidad", f"{velocity:,} m/s")
-    
-    with col_info3:
-        st.metric("Partículas", "Protón (q⁺)")
-    
-    # Créditos
-    st.markdown("---")
-    st.caption("© Domenico Sapone, Camila Montecinos")
-
-# Estado de la simulación
-if 'simulation_data' not in st.session_state:
-    st.session_state.simulation_data = None
-if 'simulation_run' not in st.session_state:
-    st.session_state.simulation_run = False
-
-# Manejo de botones
-if play_button:
-    with st.spinner("Calculando trayectoria..."):
-        posiciones_x, posiciones_y, times = run_simulation(B, velocity, field_off)
-        st.session_state.simulation_data = (posiciones_x, posiciones_y)
-        st.session_state.simulation_run = True
-        st.success("¡Simulación completada!")
-
-if reset_button:
-    st.session_state.simulation_data = None
-    st.session_state.simulation_run = False
-    st.rerun()
-
-# Mostrar simulación o mensaje inicial
-if st.session_state.simulation_run and st.session_state.simulation_data:
-    posiciones_x, posiciones_y = st.session_state.simulation_data
-    create_animation(posiciones_x, posiciones_y, field_off)
-else:
-    # Pantalla inicial
-    st.markdown("### 👆 Configura los parámetros y presiona **Play** para iniciar la simulación")
-    
-    # Mostrar gráfico estático inicial
-    fig, ax = plt.subplots(figsize=(10, 8))
-    ax.set_aspect('equal', 'box')
-    ax.set_title('Trayectoria de un protón en un campo magnético uniforme')
+    ax.set_title('Trayectoria de un protón en un campo magnético uniforme', fontsize=14)
     ax.set_xlabel('Posición X (m)')
     ax.set_ylabel('Posición Y (m)')
     ax.grid(True)
@@ -263,41 +133,101 @@ else:
     # Línea divisoria
     ax.axvline(x=field_start_pos_x, color='red', linewidth=3, linestyle='--')
     
-    # Puntos de campo magnético
-    if not field_off:
+    # Puntos de campo magnético (a la derecha) - solo si el campo no está apagado
+    if not field_off_flag:
         dots_x = np.linspace(0.005, X_LIM_RIGHT - 0.005, 6)
-        dots_y = np.linspace(-Y_LIM + 0.005, Y_LIM - 0.005, 6)
+        dots_y = np.linspace(-Y_LIM + 0.005, -0.005, 6)  # Ajustado para Y negativo
         dots_grid_x, dots_grid_y = np.meshgrid(dots_x, dots_y)
         ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=50)
-    else:
-        ax.axvspan(field_start_pos_x, X_LIM_RIGHT, alpha=0.2, color='gray')
+    
+    # Trazar la trayectoria completa
+    ax.plot(posiciones_x, posiciones_y, 'b-', lw=2, label='Trayectoria')
+    ax.plot(posiciones_x[0], posiciones_y[0], 'go', markersize=8, label='Inicio')
+    ax.plot(posiciones_x[-1], posiciones_y[-1], 'ro', markersize=8, label='Final')
+    
+    # Información en el gráfico
+    campo_status = "B = 0 T" if field_off_flag else f"B = {B_value:.3f} T"
+    info_text = f"{campo_status}\nVelocidad = {velocity_value:,} m/s"
+    ax.text(0.02, 0.95, info_text, transform=ax.transAxes, fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+    
+    ax.legend()
+    
+    return fig
+
+# Estado de la simulación
+if 'simulation_run' not in st.session_state:
+    st.session_state.simulation_run = False
+if 'simulation_data' not in st.session_state:
+    st.session_state.simulation_data = None
+
+# Manejo de botones
+if play_button:
+    with st.spinner("Calculando trayectoria..."):
+        posiciones_x, posiciones_y, times = run_simulation(B, velocity, field_off)
+        st.session_state.simulation_data = (posiciones_x, posiciones_y, B, velocity, field_off)
+        st.session_state.simulation_run = True
+
+if reset_button:
+    st.session_state.simulation_run = False
+    st.session_state.simulation_data = None
+    st.rerun()
+
+# Mostrar simulación o mensaje inicial
+if st.session_state.simulation_run and st.session_state.simulation_data:
+    posiciones_x, posiciones_y, B_val, vel_val, field_off_val = st.session_state.simulation_data
+    
+    # Mostrar el gráfico
+    fig = create_plot(posiciones_x, posiciones_y, field_off_val, B_val, vel_val)
+    st.pyplot(fig)
+    
+    # Información adicional debajo del gráfico
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Campo Magnético B", f"{B_val if not field_off_val else 0:.3f} T")
+    
+    with col2:
+        st.metric("Velocidad", f"{vel_val:,} m/s")
+    
+    with col3:
+        st.metric("Longitud de Trayectoria", f"{len(posiciones_x)} puntos")
+        
+else:
+    # Pantalla inicial con gráfico vacío
+    st.markdown("### 👆 Configura los parámetros y presiona **Ejecutar Simulación**")
+    
+    # Gráfico inicial estático
+    fig, ax = plt.subplots(figsize=(12, 8))
+    ax.set_aspect('equal', 'box')
+    ax.set_title('Trayectoria de un protón en un campo magnético uniforme', fontsize=14)
+    ax.set_xlabel('Posición X (m)')
+    ax.set_ylabel('Posición Y (m)')
+    ax.grid(True)
+    ax.set_facecolor('#f0f0f0')
+    
+    # ESCALA FIJA
+    ax.set_xlim(X_LIM_LEFT, X_LIM_RIGHT)
+    ax.set_ylim(-Y_LIM, 0.01)
+    
+    # Línea divisoria
+    ax.axvline(x=field_start_pos_x, color='red', linewidth=3, linestyle='--')
+    
+    # Puntos de campo magnético iniciales
+    if not field_off:
+        dots_x = np.linspace(0.005, X_LIM_RIGHT - 0.005, 6)
+        dots_y = np.linspace(-Y_LIM + 0.005, -0.005, 6)
+        dots_grid_x, dots_grid_y = np.meshgrid(dots_x, dots_y)
+        ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=50)
     
     # Posición inicial
-    ax.plot(initial_pos_x, 0.0, 'ro', markersize=8, label='Posición inicial')
+    ax.plot(initial_pos_x, 0.0, 'go', markersize=8, label='Posición inicial')
     ax.legend()
     
     st.pyplot(fig)
-    
-    # Información de parámetros actuales
-    st.info(f"""
-    **Parámetros actuales:**
-    - Campo magnético: **{B if not field_off else 0:.3f} T**
-    - Velocidad inicial: **{velocity:,} m/s**
-    - Tipo de partícula: **Protón**
-    """)
 
-# Información adicional
-with st.expander("📚 Información Física"):
-    st.markdown("""
-    **Física detrás de la simulación:**
-    
-    - **Fuerza de Lorentz**: F = q(v × B)
-    - **Carga del protón**: q = 1.602 × 10⁻¹⁹ C
-    - **Masa del protón**: m = 1.672 × 10⁻²⁷ kg
-    
-    **Comportamiento esperado:**
-    - **Campo activo**: Trayectoria circular (movimiento helicoidal proyectado)
-    - **Campo nulo**: Trayectoria rectilínea
-    - **Campo parcial**: Transición entre movimiento rectilíneo y circular
-    """)
+# Créditos
+st.markdown("---")
+st.caption("© Domenico Sapone, Camila Montecinos")
 
