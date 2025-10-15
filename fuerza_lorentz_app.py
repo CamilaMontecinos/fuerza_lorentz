@@ -115,7 +115,7 @@ if reset_button:
 fig, ax = plt.subplots(figsize=(9, 7))  # Tamaño balanceado
 
 ax.set_aspect('equal', 'box')
-ax.set_title('Trayectoria de un protón en un campo magnético uniforme', fontsize=12)
+# ax.set_title('Trayectoria de un protón en un campo magnético uniforme', fontsize=12)
 ax.set_xlabel('Posición X', fontsize=10)
 ax.set_ylabel('Posición Y', fontsize=10)
 ax.grid(True)
@@ -168,6 +168,7 @@ st.pyplot(fig)
 # Créditos
 st.markdown("<p style='text-align: center; color: gray;'>© Domenico Sapone, Camila Montecinos</p>", 
             unsafe_allow_html=True)
+
 
 
 
