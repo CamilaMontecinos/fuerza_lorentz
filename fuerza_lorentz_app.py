@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Configuración de la página
-st.set_page_config(page_title="Simulación Campo Magnético", layout="centered")
+st.set_page_config(page_title="Simulación Campo Magnético", layout="centered")  # Cambiado a centered
 
 # Constantes físicas
 q_proton = 1.602e-19
@@ -111,59 +111,66 @@ if reset_button:
     st.session_state.simulation_data = None
     st.rerun()
 
-# Crear el gráfico
-fig, ax = plt.subplots(figsize=(10, 8))
+# Usar un contenedor para controlar el tamaño
+col1, col2, col3 = st.columns([1, 2, 1])
 
-ax.set_aspect('equal', 'box')
-# ax.set_title('Trayectoria de un protón en un campo magnético uniforme')
-ax.set_xlabel('Posición X')
-ax.set_ylabel('Posición Y')
-ax.grid(True)
-ax.set_facecolor('#f0f0f0')
-
-# ESCALA FIJA
-ax.set_xlim(X_LIM_LEFT, X_LIM_RIGHT)
-ax.set_ylim(-Y_LIM, 0.01)
-
-# Línea divisoria
-ax.axvline(x=field_start_pos_x, color='red', linewidth=3, linestyle='--')
-
-# Puntos de campo magnético (a la derecha)
-dots_x = np.linspace(0.005, X_LIM_RIGHT - 0.005, 6)
-dots_y = np.linspace(-Y_LIM + 0.005, -0.005, 6)
-dots_grid_x, dots_grid_y = np.meshgrid(dots_x, dots_y)
-
-# Estilo de puntos según campo
-if field_off:
-    ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='gray', s=50, alpha=0.25)
-else:
-    ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=50, alpha=1.0)
-
-# Mostrar simulación o estado inicial
-if st.session_state.simulation_run and st.session_state.simulation_data:
-    posiciones_x, posiciones_y = st.session_state.simulation_data
+with col2:
+    # Crear el gráfico con tamaño más pequeño y ajustes de diseño
+    fig, ax = plt.subplots(figsize=(6, 4.5))  # Más pequeño aún
     
-    # Trazar solo la trayectoria (línea azul)
-    ax.plot(posiciones_x, posiciones_y, 'b-', lw=2)
+    ax.set_aspect('equal', 'box')
+    ax.set_title('Trayectoria de un protón en un campo magnético uniforme', fontsize=11)
+    ax.set_xlabel('Posición X', fontsize=9)
+    ax.set_ylabel('Posición Y', fontsize=9)
+    ax.grid(True)
+    ax.set_facecolor('#f0f0f0')
     
-    # Información en el gráfico (solo campo y velocidad como antes)
+    # ESCALA FIJA
+    ax.set_xlim(X_LIM_LEFT, X_LIM_RIGHT)
+    ax.set_ylim(-Y_LIM, 0.01)
+    
+    # Línea divisoria
+    ax.axvline(x=field_start_pos_x, color='red', linewidth=2, linestyle='--')
+    
+    # Puntos de campo magnético (a la derecha)
+    dots_x = np.linspace(0.005, X_LIM_RIGHT - 0.005, 6)
+    dots_y = np.linspace(-Y_LIM + 0.005, -0.005, 6)
+    dots_grid_x, dots_grid_y = np.meshgrid(dots_x, dots_y)
+    
+    # Estilo de puntos según campo
     if field_off:
-        campo_text = "SIN campo (B=0)"
+        ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='gray', s=30, alpha=0.25)  # s reducido
     else:
-        campo_text = f"B = {B:.3f} T"
+        ax.scatter(dots_grid_x, dots_grid_y, marker='.', color='black', s=30, alpha=1.0)  # s reducido
     
-    info_text = f"{campo_text}\nVelocidad = {velocity:,} m/s"
-    ax.text(0.02, 0.95, info_text, transform=ax.transAxes, fontsize=10,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+    # Mostrar simulación o estado inicial
+    if st.session_state.simulation_run and st.session_state.simulation_data:
+        posiciones_x, posiciones_y = st.session_state.simulation_data
+        
+        # Trazar solo la trayectoria (línea azul)
+        ax.plot(posiciones_x, posiciones_y, 'b-', lw=1.5)  # lw reducido
+        
+        # Información en el gráfico (solo campo y velocidad como antes)
+        if field_off:
+            campo_text = "SIN campo (B=0)"
+        else:
+            campo_text = f"B = {B:.3f} T"
+        
+        info_text = f"{campo_text}\nVelocidad = {velocity:,} m/s"
+        ax.text(0.02, 0.95, info_text, transform=ax.transAxes, fontsize=8,  # fontsize reducido
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+        
+    else:
+        # Estado inicial - solo posición inicial
+        ax.plot(initial_pos_x, 0.0, 'ro', markersize=6)  # markersize reducido
+        ax.text(0.02, 0.95, 'Presiona Play para iniciar', transform=ax.transAxes, fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
     
-else:
-    # Estado inicial - solo posición inicial
-    ax.plot(initial_pos_x, 0.0, 'ro', markersize=8)
-    ax.text(0.02, 0.95, 'Presiona Play para iniciar', transform=ax.transAxes, fontsize=10,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
-
-# Mostrar el gráfico
-st.pyplot(fig)
+    # Ajustar los espacios alrededor del gráfico
+    plt.tight_layout()
+    
+    # Mostrar el gráfico
+    st.pyplot(fig, use_container_width=True)
 
 # Créditos
 st.markdown("<p style='text-align: center; color: gray;'>© Domenico Sapone, Camila Montecinos</p>", 
