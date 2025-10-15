@@ -112,10 +112,10 @@ if reset_button:
     st.rerun()
 
 # Crear el gráfico
-fig, ax = plt.subplots(figsize=(10, 8))
+fig, ax = plt.subplots(figsize=(8, 6))
 
 ax.set_aspect('equal', 'box')
-ax.set_title('Trayectoria de un protón en un campo magnético uniforme')
+# ax.set_title('Trayectoria de un protón en un campo magnético uniforme')
 ax.set_xlabel('Posición X')
 ax.set_ylabel('Posición Y')
 ax.grid(True)
@@ -168,3 +168,4 @@ st.pyplot(fig)
 # Créditos
 st.markdown("<p style='text-align: center; color: gray;'>© Domenico Sapone, Camila Montecinos</p>", 
             unsafe_allow_html=True)
+
